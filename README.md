@@ -1,8 +1,32 @@
-# New MCP Server
+# Zopio MCP Server
 
-Bu MCP sunucusu, new_mcp reposunu klonlama, bağımlılıkları yükleme ve geliştirme sunucusunu başlatma işlemlerini otomatikleştirir.
+Zopio framework'ünü otomatik olarak masaüstünüze klonlayan, bağımlılıkları yükleyen ve geliştirme sunucusunu başlatan MCP sunucusu.
 
-## Test Yöntemleri
+## 🎯 Özellikler
+
+- ✅ **Cross-platform**: macOS, Linux ve Windows 11 desteği
+- 🚀 **Otomatik kurulum**: Tek tıkla Zopio'yu masaüstüne klonlar ve başlatır
+- 📦 **Bağımlılık yönetimi**: npm install otomatik çalışır
+- 🔄 **Sunucu kontrolü**: Başlatma ve durdurma işlemleri
+- 📊 **Durum takibi**: Kurulum ve sunucu durumunu kontrol edin
+
+## 🛠️ Mevcut Tool'lar
+
+### 1. **setup-zopio**
+Zopio framework'ünü masaüstüne klonlar, bağımlılıkları yükler ve geliştirme sunucusunu başlatır.
+
+**Parametreler:**
+- `shouldClone` (boolean, default: true): 
+  - `true`: Repoyu klonla ve başlat
+  - `false`: Mevcut repoyu kullan ve başlat
+
+### 2. **stop-zopio**
+Çalışan Zopio geliştirme sunucusunu durdurur.
+
+### 3. **check-zopio-status**
+Zopio kurulumunun ve sunucunun durumunu kontrol eder.
+
+## 🧪 Test Yöntemleri
 
 ### 1. MCP Inspector ile Test (Önerilen)
 
@@ -10,57 +34,82 @@ Bu MCP sunucusu, new_mcp reposunu klonlama, bağımlılıkları yükleme ve geli
 npx @modelcontextprotocol/inspector npx ts-node src/server.ts
 ```
 
-Bu komut bir web arayüzü açacak ve MCP sunucunuzu test edebilirsiniz.
+Web arayüzünde:
+1. "setup-zopio" tool'unu seçin
+2. `shouldClone: true` parametresi ile çalıştırın
+3. Zopio masaüstünüze klonlanacak ve başlatılacak
 
-### 2. Test Script ile Test
+### 2. Claude Desktop ile Kullanım
 
-```bash
-node test-mcp.js
-```
-
-Bu basit bir stdio test script'idir ve sunucunuzun temel işlevlerini test eder.
-
-### 3. Claude Desktop ile Kullanım
-
-Claude Desktop config dosyanızı düzenleyin:
-
-**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**macOS/Linux:** `~/Library/Application Support/Claude/claude_desktop_config.json`  
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
-    "new_mcp": {
+    "zopio": {
       "command": "npx",
       "args": [
         "ts-node",
-        "/Users/tahaenescinli/Desktop/NEW MCP/src/server.ts"
+        "/Users/KULLANICI_ADINIZ/Desktop/NEW MCP/src/server.ts"
       ]
     }
   }
 }
 ```
 
-Claude Desktop'ı yeniden başlatın ve MCP sunucunuz kullanıma hazır olacak.
+Claude Desktop'ı yeniden başlatın ve şunu sorun:
+> "Zopio'yu masaüstüme klonla ve başlat"
 
-## Mevcut Tool
+## 📋 Gereksinimler
 
-- **setup-new_mcp**: new_mcp reposunu klonlar, bağımlılıkları yükler ve geliştirme sunucusunu başlatır.
+- Node.js 18+
+- Git
+- npm
 
-## Geliştirme
+## 🚀 Kurulum
 
 ```bash
 # Bağımlılıkları yükle
 npm install
 
-# Sunucuyu çalıştır
-npx ts-node src/server.ts
-
-# Test et
-node test-mcp.js
+# Sunucuyu test et
+npx @modelcontextprotocol/inspector npx ts-node src/server.ts
 ```
 
-## Notlar
+## 📝 Kullanım Senaryoları
 
-- Sunucu stdio üzerinden çalışır
+### Senaryo 1: İlk Kurulum
+```
+Tool: setup-zopio
+Parametre: shouldClone = true
+Sonuç: Zopio masaüstüne klonlanır ve başlatılır
+```
+
+### Senaryo 2: Mevcut Repo ile Çalışma
+```
+Tool: setup-zopio
+Parametre: shouldClone = false
+Sonuç: Masaüstündeki mevcut Zopio klasörü kullanılır
+```
+
+### Senaryo 3: Sunucuyu Durdurma
+```
+Tool: stop-zopio
+Sonuç: Çalışan geliştirme sunucusu durdurulur
+```
+
+## 🌍 Platform Desteği
+
+| Platform | Masaüstü Yolu | Durum |
+|----------|---------------|-------|
+| macOS | `~/Desktop` | ✅ Test edildi |
+| Linux | `~/Desktop` | ✅ Destekleniyor |
+| Windows 11 | `%USERPROFILE%\Desktop` | ✅ Destekleniyor |
+
+## 📄 Notlar
+
+- Zopio reposu her zaman masaüstüne klonlanır
+- Sunucu stdio üzerinden çalışır (MCP standardı)
 - MCP protokol versiyonu: 2024-11-05
 - TypeScript ile yazılmıştır

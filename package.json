@@ -1,7 +1,13 @@
 {
-  "name": "new-mcp",
+  "name": "zopio-mcp",
   "version": "1.0.0",
   "type": "module",
+  "description": "MCP server for Zopio framework setup and management",
+  "main": "src/server.ts",
+  "scripts": {
+    "start": "ts-node src/server.ts",
+    "test": "npx @modelcontextprotocol/inspector npx ts-node src/server.ts"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.20.0",
     "commander": "^14.0.1"
