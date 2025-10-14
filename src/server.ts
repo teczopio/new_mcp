@@ -12,15 +12,15 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
-const repoUrl = "https://github.com/teczopio/new_mcp.git";
-const repoDir = path.join(process.cwd(), "new_mcp");
+const repoUrl = "https://github.com/zopiolabs/zopio.git";
+const repoDir = path.join(process.cwd(), "zopio");
 
 async function ask(question: string): Promise<string> {
   return new Promise((resolve) => rl.question(question, resolve));
 }
 
-async function setupNewMcp() {
-  const answer = await ask("new_mcp reposunu klonladınız mı, benim klonlayıp başlatmamı mı istersiniz? (e/h): ");
+async function setupZopio() {
+  const answer = await ask("zopio reposunu klonladınız mı, benim klonlayıp başlatmamı mı istersiniz? (e/h): ");
   if (answer.toLowerCase() === "h") {
     console.log("➡️ Repo klonlanıyor...");
     execSync(`git clone ${repoUrl}`, { stdio: "inherit" });
@@ -43,7 +43,7 @@ async function setupNewMcp() {
 
 const server = new Server(
   {
-    name: "new_mcp",
+    name: "zopio",
     version: "1.0.0",
   },
   {
@@ -57,8 +57,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
-        name: "setup-new_mcp",
-        description: "new_mcp reposunu klonlar, bağımlılıkları yükler ve geliştirme sunucusunu başlatır.",
+        name: "setup-zopio",
+        description: "zopio reposunu klonlar, bağımlılıkları yükler ve geliştirme sunucusunu başlatır.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -69,13 +69,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  if (request.params.name === "setup-new_mcp") {
-    await setupNewMcp();
+  if (request.params.name === "setup-zopio") {
+    await setupZopio();
     return {
       content: [
         {
           type: "text",
-          text: "new_mcp kurulumu tamamlandı.",
+          text: "zopio kurulumu tamamlandı.",
         },
       ],
     };
