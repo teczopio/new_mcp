@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "zopio": {
+      "command": "npx",
+      "args": [
+        "ts-node",
+        "/Users/tahaenescinli/Desktop/NEW MCP/src/server.ts"
+      ]
+    }
+  }
+}

@@ -6,6 +6,7 @@
   "main": "src/server.ts",
   "scripts": {
     "start": "ts-node src/server.ts",
+    "cli": "ts-node src/cli.ts",
     "test": "npx @modelcontextprotocol/inspector npx ts-node src/server.ts"
   },
   "dependencies": {
