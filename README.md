@@ -1,31 +1,55 @@
-# Zopio MCP Server
+# Zopio MCP Server (Senaryo Bazlı)
 
-Zopio framework'ünü otomatik olarak masaüstünüze klonlayan, bağımlılıkları yükleyen ve geliştirme sunucusunu başlatan MCP sunucusu.
+Model Context Protocol (MCP) sunucusu ile Zopio framework'ünü senaryo bazlı yönetin!
 
 ## 🎯 Özellikler
 
-- ✅ **Cross-platform**: macOS, Linux ve Windows 11 desteği
-- 🚀 **Otomatik kurulum**: Tek tıkla Zopio'yu masaüstüne klonlar ve başlatır
-- 📦 **Bağımlılık yönetimi**: pnpm install otomatik çalışır
-- 🔄 **Sunucu kontrolü**: Başlatma ve durdurma işlemleri
-- 📊 **Durum takibi**: Kurulum ve sunucu durumunu kontrol edin
-- 👋 **Karşılama mesajı**: Cascade başladığında otomatik talimatlar gösterilir
+- ✅ **Senaryo bazlı kurulum** - Sadece ihtiyacınız olan uygulamayı kurun
+- ✅ **Yeni başlayanlar için eğitim** - Hiç bilmeyen geliştiriciler için kapsamlı rehber
+- ✅ Zopio framework'ünü otomatik klonlama
+- ✅ Bağımlılıkları otomatik yükleme (pnpm)
+- ✅ Belirli uygulamaları başlatma (web, api, app, docs)
+- ✅ Sunucu durumunu kontrol etme
+- ✅ Türkçe komut desteği
+- ✅ Cascade AI ile entegrasyon
+- ✅ **Etkileşimli promptlar** - Uygulamalar ve paketler hakkında detaylı açıklamalar
+
+## 🎬 Senaryolar
+
+Artık tüm uygulamaları değil, sadece ihtiyacınız olanı kurabilirsiniz:
+
+- **Web Uygulaması** - Sadece web arayüzünü çalıştırın (Port: 3000)
+- **API Uygulaması** - Sadece backend API'yi çalıştırın (Port: 3001)
+- **Ana Uygulama** - Sadece ana uygulamayı çalıştırın (Port: 3002)
+- **Dokümantasyon** - Sadece dokümantasyon sitesini çalıştırın (Port: 3003)
+- **Email Paketi** - Sadece email servislerini çalıştırın (Port: 3004)
+- **Tüm Uygulamalar** - Hepsini birden çalıştırın
 
 ## 🛠️ Mevcut Tool'lar
 
-### 1. **setup-zopio**
-Zopio framework'ünü masaüstüne klonlar, bağımlılıkları yükler ve geliştirme sunucusunu başlatır.
+### 1. **setup-zopio-app**
+
+Zopio'da belirli bir uygulamayı senaryo bazlı kurar ve başlatır.
 
 **Parametreler:**
-- `shouldClone` (boolean, default: true): 
-  - `true`: Repoyu klonla ve başlat
-  - `false`: Mevcut repoyu kullan ve başlat
+- `appType` (string, **gerekli**):
+  - `web`: Web uygulaması (Port: 3000)
+  - `api`: API uygulaması (Port: 3001)
+  - `app`: Ana uygulama (Port: 3002)
+  - `docs`: Dokümantasyon (Port: 3003)
+  - `email`: Email paketi (Port: 3004)
+  - `all`: Tüm uygulamalar
 
-### 2. **stop-zopio**
-Çalışan Zopio geliştirme sunucusunu durdurur.
+### 2. **stop-zopio-app**
+
+Çalışan Zopio uygulamasını durdurur.
+
+**Parametreler:**
+- `appType` (string, opsiyonel): Durdurulacak uygulama türü. Belirtilmezse tüm uygulamalar durdurulur.
 
 ### 3. **check-zopio-status**
-Zopio kurulumunun ve sunucunun durumunu kontrol eder.
+
+Zopio kurulumunun ve çalışan uygulamaların durumunu kontrol eder.
 
 ## 🧪 Test Yöntemleri
 
@@ -38,22 +62,27 @@ npm run cli
 CLI başlatıldığında şu çıktıyı göreceksiniz:
 
 ```text
-🔌 MCP Sunucusuna bağlanılıyor...
-
-✅ Sunucuya bağlandı!
-
-📋 Mevcut Tool'lar:
-  • setup-zopio: Zopio framework'ünü masaüstüne klonlar, bağımlılıkları yükler ve geliştirme sunucusunu başlatır.
-  • stop-zopio: Çalışan Zopio geliştirme sunucusunu durdurur.
-  • check-zopio-status: Zopio kurulumunun ve sunucunun durumunu kontrol eder.
-
-
 📖 Komutlar:
-  setup [clone]  - Zopio'yu kur (clone: true/false)
-  stop          - Zopio sunucusunu durdur
+  setup <app>   - Zopio uygulaması kur
+                  app: web, api, app, docs, all
+                  Örnek: setup web
+  stop [app]    - Uygulamayı durdur (belirtilmezse tümü)
+                  Örnek: stop web veya stop
   status        - Zopio durumunu kontrol et
   help          - Bu yardım mesajını göster
   exit          - Çıkış
+```
+
+**Örnek Kullanım:**
+
+```bash
+zopio> setup web        # Sadece web uygulamasını kur
+zopio> setup api        # Sadece API uygulamasını kur
+zopio> setup email      # Sadece email paketini kur
+zopio> setup all        # Tüm uygulamaları kur
+zopio> status           # Durumu kontrol et
+zopio> stop email       # Email paketini durdur
+zopio> stop             # Tüm uygulamaları durdur
 ```
 
 ### 2. MCP Inspector ile Test
@@ -63,9 +92,9 @@ npx @modelcontextprotocol/inspector npx ts-node src/server.ts
 ```
 
 Web arayüzünde:
-1. "setup-zopio" tool'unu seçin
-2. `shouldClone: true` parametresi ile çalıştırın
-3. Zopio masaüstünüze klonlanacak ve başlatılacak
+1. "setup-zopio-app" tool'unu seçin
+2. `appType` parametresini seçin (web, api, app, docs, email, all)
+3. Seçilen uygulama masaüstünüze klonlanacak ve başlatılacak
 
 ### 3. Claude Desktop ile Kullanım
 
@@ -87,7 +116,9 @@ Web arayüzünde:
 ```
 
 Claude Desktop'ı yeniden başlatın ve şunu sorun:
-> "Zopio'yu masaüstüme klonla ve başlat"
+> "Ben Zopio'da web uygulaması kurmak istiyorum"
+> "Zopio'da API uygulaması kur"
+> "Zopio'nun tüm uygulamalarını kur"
 
 ### 4. Windsurf IDE ile Kullanım
 
@@ -173,6 +204,41 @@ Windsurf'ü yeniden başlatın. **Cascade açıldığı anda** Zopio MCP sunucus
   - "Zopio'yu kur"
   - "Zopio durumunu kontrol et"
   - "Zopio sunucusunu durdur"
+
+## 🎓 Yeni Başlayanlar İçin
+
+**"Ben yazılımla amatör olarak ilgileniyorum, söylediklerinden pek bir şey anlamadım beni yönlendirir misin?"**
+
+Windsurf'te Cascade'i açtığınızda, MCP otomatik olarak bağlanır ve size yardımcı olmaya hazır olur!
+
+### 📚 Eğitim Promptları
+
+MCP içinde kullanabileceğiniz eğitim promptları:
+
+1. **zopio-yeni-baslayanlar** - Zopio Framework'e giriş, temel kavramlar
+2. **zopio-uygulama-aciklamalari** - Her uygulamanın (WEB, API, MAIL vb.) ne işe yaradığı
+3. **zopio-paket-aciklamalari** - Packages içindeki entegrasyonların nasıl kullanılacağı
+4. **zopio-pratik-senaryo** - Email gönderme gibi gerçek senaryolarla öğrenme
+
+### 💡 Nasıl Kullanılır?
+
+Cascade'de doğrudan Türkçe sorular sorabilirsiniz:
+
+```
+"Ben yazılımla amatör olarak ilgileniyorum, bana yol gösterir misin?"
+"Web uygulaması ne işe yarar?"
+"Email nasıl gönderirim?"
+"İletişim formu nasıl yaparım?"
+```
+
+### 📖 Detaylı Eğitim
+
+Kapsamlı eğitim senaryosu için `EGITIM_SENARYOSU.md` dosyasına bakın. Bu dosyada:
+- ✅ Her uygulamanın detaylı açıklaması
+- ✅ Günlük hayattan örneklerle anlatım
+- ✅ Paketlerin nasıl kullanılacağı
+- ✅ Adım adım pratik senaryolar
+- ✅ Sık sorulan sorular ve cevapları
 
 ## 📋 Gereksinimler
 

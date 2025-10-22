@@ -79,8 +79,11 @@ async function callTool(toolName: string, args: any = {}) {
 
 function showHelp() {
   console.log("\n📖 Komutlar:");
-  console.log("  setup [clone]  - Zopio'yu kur (clone: true/false)");
-  console.log("  stop          - Zopio sunucusunu durdur");
+  console.log("  setup <app>   - Zopio uygulaması kur");
+  console.log("                  app: web, api, app, docs, email, all");
+  console.log("                  Örnek: setup web, setup email");
+  console.log("  stop [app]    - Uygulamayı durdur (belirtilmezse tümü)");
+  console.log("                  Örnek: stop web veya stop");
   console.log("  status        - Zopio durumunu kontrol et");
   console.log("  help          - Bu yardım mesajını göster");
   console.log("  exit          - Çıkış\n");
@@ -92,12 +95,29 @@ async function handleCommand(input: string) {
 
   switch (command) {
     case "setup":
-      const shouldClone = parts[1] !== "false";
-      await callTool("setup-zopio", { shouldClone });
+      const appType = parts[1];
+      if (!appType) {
+        console.log("❌ Uygulama türü belirtmelisiniz!");
+        console.log("Kullanım: setup <app>");
+        console.log("Seçenekler: web, api, app, docs, email, all\n");
+        break;
+      }
+      if (!["web", "api", "app", "docs", "email", "all"].includes(appType)) {
+        console.log(`❌ Geçersiz uygulama türü: ${appType}`);
+        console.log("Seçenekler: web, api, app, docs, email, all\n");
+        break;
+      }
+      await callTool("setup-zopio-app", { appType });
       break;
 
     case "stop":
-      await callTool("stop-zopio");
+      const stopAppType = parts[1];
+      if (stopAppType && !["web", "api", "app", "docs", "email", "all"].includes(stopAppType)) {
+        console.log(`❌ Geçersiz uygulama türü: ${stopAppType}`);
+        console.log("Seçenekler: web, api, app, docs, email, all\n");
+        break;
+      }
+      await callTool("stop-zopio-app", stopAppType ? { appType: stopAppType } : {});
       break;
 
     case "status":
