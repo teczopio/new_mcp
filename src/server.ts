@@ -447,8 +447,8 @@ async function generateProjectStructure(requirements: ProjectRequirements, repoD
     // Controller dosyalarını oluştur
     await generateControllers(requirements, projectDir);
     
-    // View dosyalarını oluştur
-    await generateViews(requirements, projectDir);
+    // View dosyalarını oluştur (Zopio locale-based routing)
+    await generateViews(requirements, repoDir);
     
     // API routes oluştur
     await generateApiRoutes(requirements, repoDir);
@@ -456,12 +456,16 @@ async function generateProjectStructure(requirements: ProjectRequirements, repoD
     // Config dosyalarını oluştur
     await generateConfigFiles(requirements, projectDir);
     
+    // Environment variables oluştur (Zopio için gerekli)
+    await generateEnvFiles(repoDir, requirements);
+    
     // Database schema oluştur
     await generateDatabaseSchema(requirements, repoDir);
 
+    const projectSlug = requirements.projectName.toLowerCase().replace(/\s+/g, '-');
     return {
       success: true,
-      message: `✅ Proje dosyaları oluşturuldu: ${projectDir}`
+      message: `✅ Proje dosyaları oluşturuldu!\n📁 Route: /en/${projectSlug}\n🌐 URL: http://localhost:3001/en/${projectSlug}`
     };
   } catch (error: any) {
     return {
@@ -518,6 +522,80 @@ async function generateModels(requirements: ProjectRequirements, projectDir: str
       const modelContent = generatePrismaModel(model);
       fs.writeFileSync(path.join(modelsDir, `${model.name}.ts`), modelContent);
     }
+  } else if (requirements.projectType === 'e-commerce') {
+    // E-ticaret sistemi için modeller
+    const models = [
+      {
+        name: 'Category',
+        fields: [
+          { name: 'name', type: 'string', required: true },
+          { name: 'slug', type: 'string', required: true },
+          { name: 'description', type: 'string', required: false },
+          { name: 'image', type: 'string', required: false }
+        ]
+      },
+      {
+        name: 'Product',
+        fields: [
+          { name: 'name', type: 'string', required: true },
+          { name: 'slug', type: 'string', required: true },
+          { name: 'description', type: 'string', required: false },
+          { name: 'price', type: 'number', required: true },
+          { name: 'salePrice', type: 'number', required: false },
+          { name: 'stock', type: 'number', required: true },
+          { name: 'categoryId', type: 'string', required: true },
+          { name: 'images', type: 'string', required: false },
+          { name: 'featured', type: 'boolean', required: false }
+        ]
+      },
+      {
+        name: 'Customer',
+        fields: [
+          { name: 'name', type: 'string', required: true },
+          { name: 'email', type: 'email', required: true },
+          { name: 'phone', type: 'phone', required: true },
+          { name: 'address', type: 'string', required: false },
+          { name: 'city', type: 'string', required: false },
+          { name: 'zipCode', type: 'string', required: false }
+        ]
+      },
+      {
+        name: 'Cart',
+        fields: [
+          { name: 'customerId', type: 'string', required: true },
+          { name: 'productId', type: 'string', required: true },
+          { name: 'quantity', type: 'number', required: true },
+          { name: 'price', type: 'number', required: true }
+        ]
+      },
+      {
+        name: 'Order',
+        fields: [
+          { name: 'customerId', type: 'string', required: true },
+          { name: 'orderNumber', type: 'string', required: true },
+          { name: 'status', type: 'string', required: true },
+          { name: 'totalAmount', type: 'number', required: true },
+          { name: 'shippingAddress', type: 'string', required: true },
+          { name: 'paymentMethod', type: 'string', required: true },
+          { name: 'notes', type: 'string', required: false }
+        ]
+      },
+      {
+        name: 'OrderItem',
+        fields: [
+          { name: 'orderId', type: 'string', required: true },
+          { name: 'productId', type: 'string', required: true },
+          { name: 'quantity', type: 'number', required: true },
+          { name: 'price', type: 'number', required: true },
+          { name: 'subtotal', type: 'number', required: true }
+        ]
+      }
+    ];
+
+    for (const model of models) {
+      const modelContent = generatePrismaModel(model);
+      fs.writeFileSync(path.join(modelsDir, `${model.name}.ts`), modelContent);
+    }
   }
 }
 
@@ -565,6 +643,13 @@ async function generateControllers(requirements: ProjectRequirements, projectDir
 
   if (requirements.projectType === 'appointment-system') {
     const controllers = ['ServiceController', 'CustomerController', 'AppointmentController'];
+    
+    for (const controller of controllers) {
+      const controllerContent = generateControllerContent(controller, requirements);
+      fs.writeFileSync(path.join(controllersDir, `${controller}.ts`), controllerContent);
+    }
+  } else if (requirements.projectType === 'e-commerce') {
+    const controllers = ['ProductController', 'CategoryController', 'CartController', 'OrderController', 'CustomerController'];
     
     for (const controller of controllers) {
       const controllerContent = generateControllerContent(controller, requirements);
@@ -666,34 +751,113 @@ export class ${controllerName} {
 }
 
 /**
- * View dosyalarını oluşturur
+ * Ana sayfa içeriği oluşturur - Zopio Design System ile uyumlu
  */
-async function generateViews(requirements: ProjectRequirements, projectDir: string): Promise<void> {
-  const viewsDir = path.join(projectDir, 'components');
-  if (!fs.existsSync(viewsDir)) {
-    fs.mkdirSync(viewsDir, { recursive: true });
+function generateMainPage(requirements: ProjectRequirements): string {
+  const projectName = requirements.projectName;
+  
+  return `/**
+ * SPDX-License-Identifier: MIT
+ */
+
+'use client';
+
+import React, { useState } from 'react';
+
+export default function ${projectName.replace(/\s+/g, '')}Page() {
+  const [loading, setLoading] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-card rounded-lg shadow-md p-6 border border-border">
+          <h1 className="text-3xl font-bold mb-6 text-foreground">${projectName}</h1>
+          
+          <div className="space-y-4">
+            <p className="text-muted-foreground">
+              ${requirements.description || 'Hoş geldiniz! Bu sayfa otomatik olarak oluşturuldu.'}
+            </p>
+            
+            {loading && (
+              <div className="flex justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
+              {/* Özellikler buraya gelecek */}
+              ${requirements.features.map(feature => `
+              <div className="p-4 bg-muted rounded-lg">
+                <h3 className="font-semibold text-foreground mb-2">${feature}</h3>
+                <p className="text-sm text-muted-foreground">Özellik açıklaması</p>
+              </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+`;
+}
+
+/**
+ * View dosyalarını oluşturur - Zopio locale-based routing yapısına uygun
+ */
+async function generateViews(requirements: ProjectRequirements, repoDir: string): Promise<void> {
+  // Zopio'nun yapısı: apps/web/app/[locale]/[route-name]/
+  const projectSlug = requirements.projectName.toLowerCase().replace(/\s+/g, '-');
+  const pageDir = path.join(repoDir, 'apps', 'web', 'app', '[locale]', projectSlug);
+  
+  if (!fs.existsSync(pageDir)) {
+    fs.mkdirSync(pageDir, { recursive: true });
+  }
+
+  // Ana sayfa oluştur
+  const mainPageContent = generateMainPage(requirements);
+  fs.writeFileSync(path.join(pageDir, 'page.tsx'), mainPageContent);
+  
+  console.log(`✅ Ana sayfa oluşturuldu: /[locale]/${projectSlug}/page.tsx`);
+  
+  // Component'ler için ayrı klasör
+  const componentsDir = path.join(pageDir, 'components');
+  if (!fs.existsSync(componentsDir)) {
+    fs.mkdirSync(componentsDir, { recursive: true });
   }
 
   if (requirements.projectType === 'appointment-system') {
     const views = [
       { name: 'AppointmentForm', type: 'component' },
       { name: 'ServiceList', type: 'component' },
-      { name: 'CustomerForm', type: 'component' },
-      { name: 'Dashboard', type: 'page' }
+      { name: 'CustomerForm', type: 'component' }
     ];
     
     for (const view of views) {
       const viewContent = generateReactComponent(view.name, requirements);
-      fs.writeFileSync(path.join(viewsDir, `${view.name}.tsx`), viewContent);
+      fs.writeFileSync(path.join(componentsDir, `${view.name}.tsx`), viewContent);
+    }
+  } else if (requirements.projectType === 'e-commerce') {
+    const views = [
+      { name: 'ProductCard', type: 'component' },
+      { name: 'CartSidebar', type: 'component' }
+    ];
+    
+    for (const view of views) {
+      const viewContent = generateReactComponent(view.name, requirements);
+      fs.writeFileSync(path.join(componentsDir, `${view.name}.tsx`), viewContent);
     }
   }
 }
 
 /**
- * React component içeriği oluşturur
+ * React component içeriği oluşturur - Zopio Design System ile uyumlu
  */
 function generateReactComponent(componentName: string, requirements: ProjectRequirements): string {
-  return `'use client';
+  return `/**
+ * SPDX-License-Identifier: MIT
+ */
+
+'use client';
 
 import React, { useState } from 'react';
 
@@ -706,18 +870,18 @@ export default function ${componentName}({}: ${componentName}Props) {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold mb-6">${componentName}</h1>
+      <div className="bg-card rounded-lg shadow-md p-6 border border-border">
+        <h1 className="text-2xl font-bold mb-6 text-foreground">${componentName}</h1>
         
         {/* TODO: Component içeriği */}
         <div className="space-y-4">
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             ${componentName} component'i için içerik buraya gelecek.
           </p>
           
           {loading && (
             <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           )}
         </div>
@@ -739,6 +903,18 @@ async function generateApiRoutes(requirements: ProjectRequirements, repoDir: str
 
   if (requirements.projectType === 'appointment-system') {
     const routes = ['services', 'customers', 'appointments', 'stats'];
+    
+    for (const route of routes) {
+      const routeDir = path.join(apiDir, route);
+      if (!fs.existsSync(routeDir)) {
+        fs.mkdirSync(routeDir, { recursive: true });
+      }
+      
+      const routeContent = generateApiRoute(route);
+      fs.writeFileSync(path.join(routeDir, 'route.ts'), routeContent);
+    }
+  } else if (requirements.projectType === 'e-commerce') {
+    const routes = ['products', 'categories', 'cart', 'orders', 'customers', 'stats'];
     
     for (const route of routes) {
       const routeDir = path.join(apiDir, route);
@@ -841,20 +1017,77 @@ async function generateConfigFiles(requirements: ProjectRequirements, projectDir
 }
 
 /**
+ * Environment variables dosyası oluşturur - Zopio için gerekli tüm değişkenler
+ */
+async function generateEnvFiles(repoDir: string, requirements: ProjectRequirements): Promise<void> {
+  const envLocalPath = path.join(repoDir, 'apps', 'web', '.env.local');
+  const envExamplePath = path.join(repoDir, '.env.example');
+  
+  const projectSlug = requirements.projectName.toLowerCase().replace(/\s+/g, '-');
+  
+  const envContent = `# Database
+DATABASE_URL="postgresql://localhost:5432/${projectSlug}"
+
+# Basehub CMS (https://basehub.com)
+# Token must start with bshb_pk_
+BASEHUB_TOKEN="bshb_pk_example_token_12345"
+
+# Next.js URLs
+NEXT_PUBLIC_APP_URL="http://localhost:3001"
+NEXT_PUBLIC_WEB_URL="http://localhost:3001"
+NEXT_PUBLIC_API_URL="http://localhost:3002"
+NEXT_PUBLIC_DOCS_URL="http://localhost:3003"
+
+# Arcjet Security (https://arcjet.com)
+# Key must start with ajkey_
+ARCJET_KEY="ajkey_example_12345"
+
+# Sentry (https://sentry.io)
+SENTRY_DSN="https://example@sentry.io/12345"
+SENTRY_ORG="example-org"
+SENTRY_PROJECT="${projectSlug}"
+
+# Resend Email (https://resend.com)
+# Token must start with re_
+RESEND_TOKEN="re_example_token_12345"
+RESEND_FROM="noreply@example.com"
+
+# Vercel (optional)
+VERCEL_URL="localhost:3001"
+
+# Feature Flags (optional)
+NEXT_PUBLIC_FEATURE_FLAGS=""
+FLAGS_SECRET=""
+`;
+
+  // .env.local oluştur (apps/web altında)
+  fs.writeFileSync(envLocalPath, envContent);
+  console.log('✅ .env.local dosyası oluşturuldu: apps/web/.env.local');
+  
+  // .env.example oluştur (root'ta)
+  fs.writeFileSync(envExamplePath, envContent);
+  console.log('✅ .env.example dosyası oluşturuldu: .env.example');
+}
+
+/**
  * Database schema oluşturur
  */
 async function generateDatabaseSchema(requirements: ProjectRequirements, repoDir: string): Promise<void> {
   const prismaDir = path.join(repoDir, 'packages', 'database', 'prisma');
   
   if (requirements.projectType === 'appointment-system') {
-    const schemaContent = `
+    const schemaContent = `// Zopio Database Schema - ${requirements.projectName}
+// Generated by Zopio MCP Server
+
 generator client {
   provider = "prisma-client-js"
+  output   = "../generated/client"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
 }
 
 model Service {
@@ -922,6 +1155,143 @@ enum AppointmentStatus {
   CONFIRMED
   IN_PROGRESS
   COMPLETED
+  CANCELLED
+}
+`;
+
+    if (!fs.existsSync(prismaDir)) {
+      fs.mkdirSync(prismaDir, { recursive: true });
+    }
+    
+    fs.writeFileSync(path.join(prismaDir, 'schema.prisma'), schemaContent);
+  } else if (requirements.projectType === 'e-commerce') {
+    const schemaContent = `// Zopio Database Schema - ${requirements.projectName}
+// Generated by Zopio MCP Server
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  image       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // İlişkiler
+  products Product[]
+  
+  @@map("categories")
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  price       Int
+  salePrice   Int?
+  stock       Int       @default(0)
+  categoryId  String
+  images      String?   // JSON array olarak saklanacak
+  featured    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // İlişkiler
+  category   Category     @relation(fields: [categoryId], references: [id])
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  
+  @@map("products")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String
+  address   String?
+  city      String?
+  zipCode   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // İlişkiler
+  cartItems CartItem[]
+  orders    Order[]
+  
+  @@map("customers")
+}
+
+model CartItem {
+  id         String   @id @default(cuid())
+  customerId String
+  productId  String
+  quantity   Int      @default(1)
+  price      Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // İlişkiler
+  customer Customer @relation(fields: [customerId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id])
+  
+  @@unique([customerId, productId])
+  @@map("cart_items")
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  customerId      String
+  orderNumber     String      @unique
+  status          OrderStatus @default(PENDING)
+  totalAmount     Int
+  shippingAddress String
+  paymentMethod   String
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // İlişkiler
+  customer   Customer    @relation(fields: [customerId], references: [id])
+  orderItems OrderItem[]
+  
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Int
+  subtotal  Int
+  createdAt DateTime @default(now())
+  
+  // İlişkiler
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+  
+  @@map("order_items")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
   CANCELLED
 }
 `;
@@ -1031,6 +1401,190 @@ async function setupZopioScenario(appType: ZopioAppType): Promise<string> {
 }
 
 /**
+ * 🔍 Proje Sağlık Kontrolü - Tüm hataları tespit eder
+ */
+interface HealthCheckIssue {
+  category: string;
+  severity: 'error' | 'warning' | 'info';
+  message: string;
+  fixable: boolean;
+  fix?: () => Promise<void>;
+}
+
+interface HealthCheckResult {
+  report: string;
+  fixableIssues: HealthCheckIssue[];
+  totalIssues: number;
+  errors: number;
+  warnings: number;
+}
+
+async function performProjectHealthCheck(repoDir: string, requirements: ProjectRequirements): Promise<HealthCheckResult> {
+  const issues: HealthCheckIssue[] = [];
+  let report = "";
+  
+  // 1. Routing kontrolü
+  const projectSlug = requirements.projectName.toLowerCase().replace(/\s+/g, '-');
+  const pageDir = path.join(repoDir, 'apps', 'web', 'app', '[locale]', projectSlug);
+  
+  if (!fs.existsSync(pageDir)) {
+    issues.push({
+      category: 'Routing',
+      severity: 'error',
+      message: `Proje sayfası bulunamadı: /[locale]/${projectSlug}/`,
+      fixable: false
+    });
+  } else {
+    report += `✅ Routing yapısı doğru: /[locale]/${projectSlug}/\n`;
+  }
+  
+  // 2. Environment variables kontrolü
+  const envPath = path.join(repoDir, 'apps', 'web', '.env.local');
+  if (!fs.existsSync(envPath)) {
+    issues.push({
+      category: 'Environment',
+      severity: 'error',
+      message: '.env.local dosyası bulunamadı',
+      fixable: true,
+      fix: async () => {
+        await generateEnvFiles(repoDir, requirements);
+      }
+    });
+  } else {
+    const envContent = fs.readFileSync(envPath, 'utf-8');
+    
+    // Token formatlarını kontrol et
+    if (!envContent.includes('bshb_pk_')) {
+      issues.push({
+        category: 'Environment',
+        severity: 'warning',
+        message: 'BASEHUB_TOKEN formatı yanlış (bshb_pk_ ile başlamalı)',
+        fixable: false
+      });
+    }
+    
+    if (envContent.includes('BASEHUB_TOKEN') && envContent.includes('bshb_pk_')) {
+      report += `✅ Environment variables doğru formatta\n`;
+    }
+  }
+  
+  // 3. Prisma schema kontrolü
+  const prismaPath = path.join(repoDir, 'packages', 'database', 'prisma', 'schema.prisma');
+  if (fs.existsSync(prismaPath)) {
+    const schemaContent = fs.readFileSync(prismaPath, 'utf-8');
+    
+    if (schemaContent.includes('previewFeatures')) {
+      issues.push({
+        category: 'Prisma',
+        severity: 'warning',
+        message: 'Deprecated previewFeatures kullanılıyor',
+        fixable: true,
+        fix: async () => {
+          const fixed = schemaContent.replace(/previewFeatures\s*=\s*\[.*?\]/g, '');
+          fs.writeFileSync(prismaPath, fixed);
+        }
+      });
+    } else {
+      report += `✅ Prisma schema güncel\n`;
+    }
+  }
+  
+  // 4. Port kontrolü
+  try {
+    execSync('lsof -ti:3001', { stdio: 'pipe' });
+    report += `✅ Web server çalışıyor (port 3001)\n`;
+  } catch {
+    issues.push({
+      category: 'Server',
+      severity: 'warning',
+      message: 'Web server başlatılamadı veya port çakışması',
+      fixable: false
+    });
+  }
+  
+  // 5. Component yapısı kontrolü (hardcoded renkler)
+  const componentsToCheck = fs.readdirSync(pageDir, { recursive: true })
+    .filter((file: any) => file.endsWith('.tsx'));
+  
+  let hardcodedColorFound = false;
+  for (const file of componentsToCheck) {
+    const filePath = path.join(pageDir, file as string);
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      if (content.includes('bg-white') || content.includes('text-gray-')) {
+        hardcodedColorFound = true;
+        issues.push({
+          category: 'Design System',
+          severity: 'warning',
+          message: `Hardcoded renkler bulundu: ${file}`,
+          fixable: false
+        });
+      }
+    }
+  }
+  
+  if (!hardcodedColorFound && componentsToCheck.length > 0) {
+    report += `✅ Design system token'ları kullanılıyor\n`;
+  }
+  
+  // Özet rapor
+  const errors = issues.filter(i => i.severity === 'error').length;
+  const warnings = issues.filter(i => i.severity === 'warning').length;
+  const fixableIssues = issues.filter(i => i.fixable);
+  
+  let summary = `\n📊 SAĞLIK KONTROLÜ SONUÇLARI:\n`;
+  summary += `─`.repeat(60) + `\n`;
+  summary += `✅ Başarılı kontroller: ${5 - issues.length}/5\n`;
+  summary += `❌ Hatalar: ${errors}\n`;
+  summary += `⚠️  Uyarılar: ${warnings}\n`;
+  summary += `🔧 Otomatik düzeltilebilir: ${fixableIssues.length}\n`;
+  
+  if (issues.length > 0) {
+    summary += `\n🔍 TESPIT EDILEN SORUNLAR:\n`;
+    for (const issue of issues) {
+      const icon = issue.severity === 'error' ? '❌' : '⚠️';
+      summary += `${icon} [${issue.category}] ${issue.message}\n`;
+    }
+  }
+  
+  return {
+    report: report + summary,
+    fixableIssues,
+    totalIssues: issues.length,
+    errors,
+    warnings
+  };
+}
+
+/**
+ * 🔧 Otomatik Hata Düzeltme
+ */
+async function autoFixIssues(repoDir: string, issues: HealthCheckIssue[]): Promise<string> {
+  let output = "";
+  let fixed = 0;
+  
+  for (const issue of issues) {
+    if (issue.fix) {
+      try {
+        await issue.fix();
+        output += `✅ Düzeltildi: ${issue.message}\n`;
+        fixed++;
+      } catch (error: any) {
+        output += `❌ Düzeltilemedi: ${issue.message} - ${error.message}\n`;
+      }
+    }
+  }
+  
+  output += `\n📊 ${fixed}/${issues.length} sorun otomatik düzeltildi.\n`;
+  
+  if (fixed > 0) {
+    output += `🔄 Değişiklikler uygulandı. Server yeniden başlatılıyor...\n`;
+  }
+  
+  return output;
+}
+
+/**
  * Otomatik uygulama üretimi - Ana fonksiyon
  */
 async function generateCompleteApplication(userInput: string): Promise<string> {
@@ -1082,6 +1636,20 @@ async function generateCompleteApplication(userInput: string): Promise<string> {
     output += "🔌 Adım 6: API servisi başlatılıyor...\n";
     const apiStartResult = await startApp('api', cloneResult.repoDir);
     output += apiStartResult.message + "\n\n";
+    
+    // 7. Proje sağlık kontrolü ve hata tespiti
+    output += "🔍 Adım 7: Proje sağlık kontrolü yapılıyor...\n";
+    await new Promise(resolve => setTimeout(resolve, 3000)); // Server'ın başlaması için bekle
+    
+    const healthCheck = await performProjectHealthCheck(cloneResult.repoDir, requirements);
+    output += healthCheck.report + "\n\n";
+    
+    // 8. Otomatik hata düzeltme (varsa)
+    if (healthCheck.fixableIssues.length > 0) {
+      output += "🔧 Adım 8: Otomatik hata düzeltme yapılıyor...\n";
+      const fixResult = await autoFixIssues(cloneResult.repoDir, healthCheck.fixableIssues);
+      output += fixResult + "\n\n";
+    }
     
     // Başarı mesajı
     if (webStartResult.success && apiStartResult.success) {
