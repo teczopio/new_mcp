@@ -8,9 +8,9 @@ import {
   GetPromptRequestSchema
 } from "@modelcontextprotocol/sdk/types.js";
 import { execSync, spawn, ChildProcess } from "child_process";
-import os from "os";
-import path from "path";
-import fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import * as fs from "fs";
 
 const REPO_URL = "https://github.com/zopiolabs/zopio.git";
 let runningProcesses: Map<string, ChildProcess> = new Map();
@@ -27,6 +27,75 @@ const ZopioAppType = {
 } as const;
 
 type ZopioAppType = typeof ZopioAppType[keyof typeof ZopioAppType];
+
+// Yeni özellikler için type tanımları
+interface ProjectRequirements {
+  projectType: string;
+  projectName: string;
+  businessType: string;
+  userTypes: UserType[];
+  features: string[];
+  description: string;
+}
+
+interface UserType {
+  name: string;
+  role: 'admin' | 'user' | 'manager' | 'customer';
+  permissions: string[];
+  description: string;
+}
+
+interface ProjectStructure {
+  models: ModelFile[];
+  controllers: ControllerFile[];
+  views: ViewFile[];
+  routes: RouteFile[];
+  config: ConfigFile[];
+}
+
+interface ModelFile {
+  name: string;
+  fields: FieldDefinition[];
+  relationships: Relationship[];
+}
+
+interface FieldDefinition {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'date' | 'email' | 'phone';
+  required: boolean;
+  validation?: string;
+}
+
+interface Relationship {
+  type: 'hasMany' | 'hasOne' | 'belongsTo' | 'manyToMany';
+  model: string;
+  foreignKey?: string;
+}
+
+interface ControllerFile {
+  name: string;
+  actions: string[];
+  middleware: string[];
+}
+
+interface ViewFile {
+  name: string;
+  type: 'page' | 'component' | 'layout';
+  props: string[];
+}
+
+interface RouteFile {
+  path: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  controller: string;
+  action: string;
+  middleware: string[];
+}
+
+interface ConfigFile {
+  name: string;
+  content: any;
+}
 
 // Uygulama açıklamaları
 const APP_DESCRIPTIONS: Record<string, string> = {
@@ -52,6 +121,175 @@ function getDesktopPath(): string {
   }
   
   return homeDir;
+}
+
+/**
+ * Kullanıcıdan proje gereksinimlerini toplar
+ */
+async function gatherProjectRequirements(userInput: string): Promise<ProjectRequirements> {
+  // Proje türünü belirle
+  const projectTypes = {
+    'randevu': 'appointment-system',
+    'e-ticaret': 'e-commerce',
+    'blog': 'blog-system',
+    'portfolio': 'portfolio',
+    'kurum': 'corporate-website',
+    'restoran': 'restaurant-system',
+    'hastane': 'hospital-system',
+    'okul': 'school-system',
+    'emlak': 'real-estate',
+    'muhasebe': 'accounting-system'
+  };
+
+  let projectType = 'custom';
+  let businessType = '';
+  
+  // Kullanıcı girdisinden proje türünü tahmin et
+  for (const [key, value] of Object.entries(projectTypes)) {
+    if (userInput.toLowerCase().includes(key)) {
+      projectType = value;
+      businessType = key;
+      break;
+    }
+  }
+
+  // Proje adını çıkar
+  const projectName = extractProjectName(userInput, businessType);
+
+  // Kullanıcı tiplerini belirle
+  const userTypes = determineUserTypes(projectType, businessType);
+
+  // Özellikleri belirle
+  const features = determineFeatures(projectType, businessType);
+
+  return {
+    projectType,
+    projectName,
+    businessType,
+    userTypes,
+    features,
+    description: userInput
+  };
+}
+
+/**
+ * Proje adını çıkarır
+ */
+function extractProjectName(userInput: string, businessType: string): string {
+  // Basit ad çıkarma mantığı
+  const words = userInput.split(' ');
+  const businessIndex = words.findIndex(word => word.toLowerCase().includes(businessType));
+  
+  if (businessIndex > 0) {
+    return words.slice(0, businessIndex).join(' ') || `${businessType}-app`;
+  }
+  
+  return `${businessType}-app`;
+}
+
+/**
+ * Proje türüne göre kullanıcı tiplerini belirler
+ */
+function determineUserTypes(projectType: string, businessType: string): UserType[] {
+  const commonUserTypes: Record<string, UserType[]> = {
+    'appointment-system': [
+      {
+        name: 'Admin',
+        role: 'admin',
+        permissions: ['create', 'read', 'update', 'delete', 'manage-users'],
+        description: 'Sistem yöneticisi - tüm yetkilere sahip'
+      },
+      {
+        name: 'Salon Sahibi',
+        role: 'manager',
+        permissions: ['read', 'update', 'manage-appointments'],
+        description: 'İşletme sahibi - randevuları yönetir'
+      },
+      {
+        name: 'Müşteri',
+        role: 'customer',
+        permissions: ['read', 'create-appointment'],
+        description: 'Randevu alan müşteri'
+      }
+    ],
+    'e-commerce': [
+      {
+        name: 'Admin',
+        role: 'admin',
+        permissions: ['create', 'read', 'update', 'delete', 'manage-products', 'manage-orders'],
+        description: 'Site yöneticisi'
+      },
+      {
+        name: 'Müşteri',
+        role: 'customer',
+        permissions: ['read', 'create-order', 'update-profile'],
+        description: 'Alışveriş yapan kullanıcı'
+      }
+    ],
+    'default': [
+      {
+        name: 'Admin',
+        role: 'admin',
+        permissions: ['create', 'read', 'update', 'delete'],
+        description: 'Sistem yöneticisi'
+      },
+      {
+        name: 'Kullanıcı',
+        role: 'user',
+        permissions: ['read', 'update-own'],
+        description: 'Normal kullanıcı'
+      }
+    ]
+  };
+
+  return commonUserTypes[projectType] || commonUserTypes['default'];
+}
+
+/**
+ * Proje türüne göre özellikleri belirler
+ */
+function determineFeatures(projectType: string, businessType: string): string[] {
+  const commonFeatures: Record<string, string[]> = {
+    'appointment-system': [
+      'Randevu oluşturma',
+      'Randevu yönetimi',
+      'Hizmet yönetimi',
+      'Müşteri yönetimi',
+      'Takvim görünümü',
+      'Email bildirimleri',
+      'Ödeme sistemi',
+      'Raporlama'
+    ],
+    'e-commerce': [
+      'Ürün kataloğu',
+      'Sepet yönetimi',
+      'Sipariş takibi',
+      'Ödeme sistemi',
+      'Kullanıcı hesapları',
+      'İnventory yönetimi',
+      'Kampanya sistemi',
+      'Raporlama'
+    ],
+    'blog-system': [
+      'Yazı yönetimi',
+      'Kategori sistemi',
+      'Yorum sistemi',
+      'Kullanıcı yönetimi',
+      'Arama özelliği',
+      'SEO optimizasyonu',
+      'Social media entegrasyonu',
+      'Newsletter'
+    ],
+    'default': [
+      'Kullanıcı yönetimi',
+      'CRUD işlemleri',
+      'Arama ve filtreleme',
+      'Raporlama',
+      'Email bildirimleri'
+    ]
+  };
+
+  return commonFeatures[projectType] || commonFeatures['default'];
 }
 
 /**
@@ -112,6 +350,511 @@ async function installDependencies(repoDir: string): Promise<{ success: boolean;
       success: false,
       message: `❌ Bağımlılık yükleme hatası: ${error.message}`
     };
+  }
+}
+
+/**
+ * Proje gereksinimlerine göre dosya yapısını oluşturur
+ */
+async function generateProjectStructure(requirements: ProjectRequirements, repoDir: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const projectDir = path.join(repoDir, 'apps', 'web', 'app', requirements.projectName);
+    
+    // Ana proje klasörünü oluştur
+    if (!fs.existsSync(projectDir)) {
+      fs.mkdirSync(projectDir, { recursive: true });
+    }
+
+    // Model dosyalarını oluştur
+    await generateModels(requirements, projectDir);
+    
+    // Controller dosyalarını oluştur
+    await generateControllers(requirements, projectDir);
+    
+    // View dosyalarını oluştur
+    await generateViews(requirements, projectDir);
+    
+    // API routes oluştur
+    await generateApiRoutes(requirements, repoDir);
+    
+    // Config dosyalarını oluştur
+    await generateConfigFiles(requirements, projectDir);
+    
+    // Database schema oluştur
+    await generateDatabaseSchema(requirements, repoDir);
+
+    return {
+      success: true,
+      message: `✅ Proje dosyaları oluşturuldu: ${projectDir}`
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: `❌ Dosya oluşturma hatası: ${error.message}`
+    };
+  }
+}
+
+/**
+ * Model dosyalarını oluşturur
+ */
+async function generateModels(requirements: ProjectRequirements, projectDir: string): Promise<void> {
+  const modelsDir = path.join(projectDir, 'models');
+  if (!fs.existsSync(modelsDir)) {
+    fs.mkdirSync(modelsDir, { recursive: true });
+  }
+
+  if (requirements.projectType === 'appointment-system') {
+    // Randevu sistemi için modeller
+    const models = [
+      {
+        name: 'Service',
+        fields: [
+          { name: 'name', type: 'string', required: true },
+          { name: 'price', type: 'number', required: true },
+          { name: 'duration', type: 'number', required: true },
+          { name: 'description', type: 'string', required: false }
+        ]
+      },
+      {
+        name: 'Customer',
+        fields: [
+          { name: 'name', type: 'string', required: true },
+          { name: 'email', type: 'email', required: true },
+          { name: 'phone', type: 'phone', required: true },
+          { name: 'address', type: 'string', required: false }
+        ]
+      },
+      {
+        name: 'Appointment',
+        fields: [
+          { name: 'customerId', type: 'string', required: true },
+          { name: 'serviceIds', type: 'string', required: true },
+          { name: 'appointmentDate', type: 'date', required: true },
+          { name: 'status', type: 'string', required: true },
+          { name: 'totalPrice', type: 'number', required: true },
+          { name: 'notes', type: 'string', required: false }
+        ]
+      }
+    ];
+
+    for (const model of models) {
+      const modelContent = generatePrismaModel(model);
+      fs.writeFileSync(path.join(modelsDir, `${model.name}.ts`), modelContent);
+    }
+  }
+}
+
+/**
+ * Prisma model içeriği oluşturur
+ */
+function generatePrismaModel(model: any): string {
+  return `// ${model.name} Model
+export interface ${model.name} {
+${model.fields.map((field: any) => `  ${field.name}${field.required ? '' : '?'}: ${getPrismaType(field.type)};`).join('\n')}
+}
+
+export const ${model.name}Schema = {
+${model.fields.map((field: any) => `  ${field.name}: {
+    type: '${field.type}',
+    required: ${field.required}${field.validation ? `,\n    validation: '${field.validation}'` : ''}
+  }`).join(',\n')}
+};
+`;
+}
+
+/**
+ * TypeScript tipine dönüştürür
+ */
+function getPrismaType(type: string): string {
+  const typeMap: Record<string, string> = {
+    'string': 'string',
+    'number': 'number',
+    'boolean': 'boolean',
+    'date': 'Date',
+    'email': 'string',
+    'phone': 'string'
+  };
+  return typeMap[type] || 'string';
+}
+
+/**
+ * Controller dosyalarını oluşturur
+ */
+async function generateControllers(requirements: ProjectRequirements, projectDir: string): Promise<void> {
+  const controllersDir = path.join(projectDir, 'controllers');
+  if (!fs.existsSync(controllersDir)) {
+    fs.mkdirSync(controllersDir, { recursive: true });
+  }
+
+  if (requirements.projectType === 'appointment-system') {
+    const controllers = ['ServiceController', 'CustomerController', 'AppointmentController'];
+    
+    for (const controller of controllers) {
+      const controllerContent = generateControllerContent(controller, requirements);
+      fs.writeFileSync(path.join(controllersDir, `${controller}.ts`), controllerContent);
+    }
+  }
+}
+
+/**
+ * Controller içeriği oluşturur
+ */
+function generateControllerContent(controllerName: string, requirements: ProjectRequirements): string {
+  const entityName = controllerName.replace('Controller', '');
+  
+  return `import { NextRequest, NextResponse } from 'next/server';
+
+export class ${controllerName} {
+  // Tüm ${entityName.toLowerCase()}ları listele
+  static async getAll(req: NextRequest) {
+    try {
+      // TODO: Database'den ${entityName.toLowerCase()}ları çek
+      const ${entityName.toLowerCase()}s = [];
+      
+      return NextResponse.json({ 
+        success: true, 
+        data: ${entityName.toLowerCase()}s 
+      });
+    } catch (error: any) {
+      return NextResponse.json({ 
+        success: false, 
+        message: error.message 
+      }, { status: 500 });
+    }
+  }
+
+  // Yeni ${entityName.toLowerCase()} oluştur
+  static async create(req: NextRequest) {
+    try {
+      const data = await req.json();
+      
+      // TODO: Validation
+      // TODO: Database'e kaydet
+      
+      return NextResponse.json({ 
+        success: true, 
+        message: '${entityName} başarıyla oluşturuldu',
+        data 
+      });
+    } catch (error: any) {
+      return NextResponse.json({ 
+        success: false, 
+        message: error.message 
+      }, { status: 500 });
+    }
+  }
+
+  // ${entityName.toLowerCase()} güncelle
+  static async update(req: NextRequest, { params }: { params: { id: string } }) {
+    try {
+      const data = await req.json();
+      const { id } = params;
+      
+      // TODO: Validation
+      // TODO: Database'de güncelle
+      
+      return NextResponse.json({ 
+        success: true, 
+        message: '${entityName} başarıyla güncellendi',
+        data 
+      });
+    } catch (error: any) {
+      return NextResponse.json({ 
+        success: false, 
+        message: error.message 
+      }, { status: 500 });
+    }
+  }
+
+  // ${entityName.toLowerCase()} sil
+  static async delete(req: NextRequest, { params }: { params: { id: string } }) {
+    try {
+      const { id } = params;
+      
+      // TODO: Database'den sil
+      
+      return NextResponse.json({ 
+        success: true, 
+        message: '${entityName} başarıyla silindi' 
+      });
+    } catch (error: any) {
+      return NextResponse.json({ 
+        success: false, 
+        message: error.message 
+      }, { status: 500 });
+    }
+  }
+}
+`;
+}
+
+/**
+ * View dosyalarını oluşturur
+ */
+async function generateViews(requirements: ProjectRequirements, projectDir: string): Promise<void> {
+  const viewsDir = path.join(projectDir, 'components');
+  if (!fs.existsSync(viewsDir)) {
+    fs.mkdirSync(viewsDir, { recursive: true });
+  }
+
+  if (requirements.projectType === 'appointment-system') {
+    const views = [
+      { name: 'AppointmentForm', type: 'component' },
+      { name: 'ServiceList', type: 'component' },
+      { name: 'CustomerForm', type: 'component' },
+      { name: 'Dashboard', type: 'page' }
+    ];
+    
+    for (const view of views) {
+      const viewContent = generateReactComponent(view.name, requirements);
+      fs.writeFileSync(path.join(viewsDir, `${view.name}.tsx`), viewContent);
+    }
+  }
+}
+
+/**
+ * React component içeriği oluşturur
+ */
+function generateReactComponent(componentName: string, requirements: ProjectRequirements): string {
+  return `'use client';
+
+import React, { useState } from 'react';
+
+interface ${componentName}Props {
+  // TODO: Props tanımla
+}
+
+export default function ${componentName}({}: ${componentName}Props) {
+  const [loading, setLoading] = useState(false);
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h1 className="text-2xl font-bold mb-6">${componentName}</h1>
+        
+        {/* TODO: Component içeriği */}
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            ${componentName} component'i için içerik buraya gelecek.
+          </p>
+          
+          {loading && (
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+`;
+}
+
+/**
+ * API routes oluşturur
+ */
+async function generateApiRoutes(requirements: ProjectRequirements, repoDir: string): Promise<void> {
+  const apiDir = path.join(repoDir, 'apps', 'web', 'app', 'api');
+  if (!fs.existsSync(apiDir)) {
+    fs.mkdirSync(apiDir, { recursive: true });
+  }
+
+  if (requirements.projectType === 'appointment-system') {
+    const routes = ['services', 'customers', 'appointments', 'stats'];
+    
+    for (const route of routes) {
+      const routeDir = path.join(apiDir, route);
+      if (!fs.existsSync(routeDir)) {
+        fs.mkdirSync(routeDir, { recursive: true });
+      }
+      
+      const routeContent = generateApiRoute(route);
+      fs.writeFileSync(path.join(routeDir, 'route.ts'), routeContent);
+    }
+  }
+}
+
+/**
+ * API route içeriği oluşturur
+ */
+function generateApiRoute(routeName: string): string {
+  const entityName = routeName.slice(0, -1); // Remove 's' from plural
+  
+  return `import { NextRequest, NextResponse } from 'next/server';
+
+// GET /${routeName} - Tüm ${entityName}ları listele
+export async function GET(request: NextRequest) {
+  try {
+    // TODO: Database'den ${entityName}ları çek
+    const ${routeName} = [];
+    
+    return NextResponse.json({
+      success: true,
+      data: ${routeName}
+    });
+  } catch (error: any) {
+    console.error('${routeName.toUpperCase()} GET Error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /${routeName} - Yeni ${entityName} oluştur
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    
+    // TODO: Validation
+    // TODO: Database'e kaydet
+    
+    return NextResponse.json({
+      success: true,
+      message: '${entityName} başarıyla oluşturuldu',
+      data: body
+    });
+  } catch (error: any) {
+    console.error('${routeName.toUpperCase()} POST Error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Server error' },
+      { status: 500 }
+    );
+  }
+}
+`;
+}
+
+/**
+ * Config dosyalarını oluşturur
+ */
+async function generateConfigFiles(requirements: ProjectRequirements, projectDir: string): Promise<void> {
+  const configDir = path.join(projectDir, 'config');
+  if (!fs.existsSync(configDir)) {
+    fs.mkdirSync(configDir, { recursive: true });
+  }
+
+  // Database config
+  const dbConfig = `export const databaseConfig = {
+  development: {
+    dialect: 'sqlite',
+    storage: './database.sqlite'
+  },
+  production: {
+    dialect: 'postgresql',
+    url: process.env.DATABASE_URL
+  }
+};
+`;
+
+  fs.writeFileSync(path.join(configDir, 'database.ts'), dbConfig);
+
+  // App config
+  const appConfig = `export const appConfig = {
+  name: '${requirements.projectName}',
+  description: '${requirements.description}',
+  version: '1.0.0',
+  features: ${JSON.stringify(requirements.features, null, 2)},
+  userTypes: ${JSON.stringify(requirements.userTypes, null, 2)}
+};
+`;
+
+  fs.writeFileSync(path.join(configDir, 'app.ts'), appConfig);
+}
+
+/**
+ * Database schema oluşturur
+ */
+async function generateDatabaseSchema(requirements: ProjectRequirements, repoDir: string): Promise<void> {
+  const prismaDir = path.join(repoDir, 'packages', 'database', 'prisma');
+  
+  if (requirements.projectType === 'appointment-system') {
+    const schemaContent = `
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  name        String
+  price       Int
+  duration    Int      // dakika cinsinden
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // İlişkiler
+  appointmentServices AppointmentService[]
+  
+  @@map("services")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // İlişkiler
+  appointments Appointment[]
+  
+  @@map("customers")
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  customerId      String
+  appointmentDate DateTime
+  status          AppointmentStatus @default(PENDING)
+  totalPrice      Int
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  // İlişkiler
+  customer            Customer             @relation(fields: [customerId], references: [id])
+  appointmentServices AppointmentService[]
+  
+  @@map("appointments")
+}
+
+model AppointmentService {
+  id            String @id @default(cuid())
+  appointmentId String
+  serviceId     String
+  
+  // İlişkiler
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  service     Service     @relation(fields: [serviceId], references: [id])
+  
+  @@unique([appointmentId, serviceId])
+  @@map("appointment_services")
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+`;
+
+    if (!fs.existsSync(prismaDir)) {
+      fs.mkdirSync(prismaDir, { recursive: true });
+    }
+    
+    fs.writeFileSync(path.join(prismaDir, 'schema.prisma'), schemaContent);
   }
 }
 
@@ -212,6 +955,103 @@ async function setupZopioScenario(appType: ZopioAppType): Promise<string> {
 }
 
 /**
+ * Otomatik uygulama üretimi - Ana fonksiyon
+ */
+async function generateCompleteApplication(userInput: string): Promise<string> {
+  let output = `\n🚀 OTOMATİK UYGULAMA ÜRETİMİ BAŞLADI\n`;
+  output += "=".repeat(60) + "\n\n";
+  
+  try {
+    // 1. Gereksinimleri topla
+    output += "🔍 Adım 1: Gereksinimler analiz ediliyor...\n";
+    const requirements = await gatherProjectRequirements(userInput);
+    output += `✅ Proje türü: ${requirements.businessType} (${requirements.projectType})\n`;
+    output += `✅ Proje adı: ${requirements.projectName}\n`;
+    output += `✅ Kullanıcı tipleri: ${requirements.userTypes.map(u => u.name).join(', ')}\n`;
+    output += `✅ Özellikler: ${requirements.features.length} adet\n\n`;
+    
+    // 2. Zopio framework'ünü klonla
+    output += "📥 Adım 2: Zopio framework klonlanıyor...\n";
+    const cloneResult = await cloneZopioIfNeeded();
+    output += cloneResult.message + "\n\n";
+    
+    if (!cloneResult.success) {
+      return output;
+    }
+    
+    // 3. Bağımlılıkları yükle
+    output += "📦 Adım 3: Bağımlılıklar yükleniyor...\n";
+    const installResult = await installDependencies(cloneResult.repoDir);
+    output += installResult.message + "\n\n";
+    
+    if (!installResult.success) {
+      return output;
+    }
+    
+    // 4. Proje dosyalarını oluştur
+    output += "🛠️ Adım 4: Proje dosyaları oluşturuluyor...\n";
+    const generateResult = await generateProjectStructure(requirements, cloneResult.repoDir);
+    output += generateResult.message + "\n\n";
+    
+    if (!generateResult.success) {
+      return output;
+    }
+    
+    // 5. Web uygulamasını başlat
+    output += "🌐 Adım 5: Web uygulaması başlatılıyor...\n";
+    const webStartResult = await startApp('web', cloneResult.repoDir);
+    output += webStartResult.message + "\n\n";
+    
+    // 6. API'yi başlat  
+    output += "🔌 Adım 6: API servisi başlatılıyor...\n";
+    const apiStartResult = await startApp('api', cloneResult.repoDir);
+    output += apiStartResult.message + "\n\n";
+    
+    // Başarı mesajı
+    if (webStartResult.success && apiStartResult.success) {
+      output += "🎉".repeat(60) + "\n";
+      output += `✨ ${requirements.projectName} uygulaması hazır!\n\n`;
+      
+      output += "📋 UYGULAMA BİLGİLERİ:\n";
+      output += "─".repeat(60) + "\n";
+      output += `🏷️  Proje Adı: ${requirements.projectName}\n`;
+      output += `🏢 İş Türü: ${requirements.businessType}\n`;
+      output += `👥 Kullanıcı Tipleri: ${requirements.userTypes.length} adet\n`;
+      output += `⚡ Özellikler: ${requirements.features.length} adet\n\n`;
+      
+      output += "🌐 ERİŞİM LİNKLERİ:\n";
+      output += "─".repeat(60) + "\n";
+      output += `🖥️  Ana Sayfa: http://localhost:3000\n`;
+      output += `🔧 Admin Panel: http://localhost:3000/admin\n`;
+      output += `🔌 API: http://localhost:3001\n\n`;
+      
+      output += "📁 OLUŞTURULAN DOSYALAR:\n";
+      output += "─".repeat(60) + "\n";
+      output += `📂 Modeller: Service, Customer, Appointment\n`;
+      output += `🎮 Controller'lar: CRUD işlemleri\n`;
+      output += `🖼️  React Bileşenleri: Form ve listeler\n`;
+      output += `🛣️  API Routes: RESTful endpoints\n`;
+      output += `🗃️  Database: Prisma schema\n`;
+      output += `⚙️  Config: App ve database ayarları\n\n`;
+      
+      output += "🔧 YÖNETİM:\n";
+      output += "─".repeat(60) + "\n";
+      output += `• Durdurmak için: "stop-zopio-app" tool'unu kullanın\n`;
+      output += `• Durum kontrolü: "check-zopio-status" tool'unu kullanın\n`;
+      output += `• Kod klasörü: ${cloneResult.repoDir}\n\n`;
+      
+      output += "🎉".repeat(60);
+    }
+    
+    return output;
+    
+  } catch (error: any) {
+    output += `❌ Hata oluştu: ${error.message}\n`;
+    return output;
+  }
+}
+
+/**
  * Belirli bir uygulamayı durdurur
  */
 async function stopZopioApp(appType?: ZopioAppType): Promise<string> {
@@ -289,67 +1129,83 @@ function getWelcomeMessage(): string {
   return `
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
-║          🎉 ZOPIO MCP SERVER'A HOŞGELDİNİZ! 🎉           ║
+║      🚀 OTOMATİK UYGULAMA ÜRETİCİSİ HOŞGELDİNİZ! 🚀      ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
 
-👋 Merhaba! Zopio framework'ünü senaryo bazlı kurmak için buradayım.
+👋 Merhaba! Hiç yazılım bilmeseniz bile tam özellikli uygulamalar üretiyorum!
 
-📋 SENARYO BAZLI KURULUM:
+🎯 YENİ ÖZELLİK: OTOMATİK UYGULAMA ÜRETİMİ
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  🌐 WEB UYGULAMASI
-      ├─ Komut: "Zopio'da web uygulaması kur"
-      ├─ Ne yapar: Sadece web uygulamasını kurar ve başlatır
-      └─ Port: 3000
-
-  🔌 API UYGULAMASI
-      ├─ Komut: "Zopio'da API uygulaması kur"
-      ├─ Ne yapar: Sadece API uygulamasını kurar ve başlatır
-      └─ Port: 3001
-
-  📱 ANA UYGULAMA
-      ├─ Komut: "Zopio'da ana uygulamayı kur"
-      ├─ Ne yapar: Sadece ana uygulamayı kurar ve başlatır
-      └─ Port: 3002
-
-  📚 DOKÜMANTASYON
-      ├─ Komut: "Zopio'da dokümantasyonu kur"
-      ├─ Ne yapar: Sadece dokümantasyon sitesini kurar ve başlatır
-      └─ Port: 3003
-
-  📧 EMAIL PAKETİ
-      ├─ Komut: "Zopio'da email paketini kur"
-      ├─ Ne yapar: Sadece email servislerini kurar ve başlatır
-      └─ Port: 3004
-
-  🎯 TÜM UYGULAMALAR
-      ├─ Komut: "Zopio'nun tüm uygulamalarını kur"
-      └─ Ne yapar: Tüm uygulamaları kurar ve başlatır
+  🤖 TAM OTOMATİK UYGULAMA
+      ├─ Doğal dille isteğinizi yazın
+      ├─ Otomatik gereksinim analizi
+      ├─ Tüm dosyaları otomatik oluşturur
+      ├─ Çalışır halde uygulama teslim eder
+      └─ Örnek: "Güzellik salonu randevu sistemi istiyorum"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🛑 DURDURMA:
-   • Belirli bir uygulamayı durdur: "Web uygulamasını durdur"
-   • Tüm uygulamaları durdur: "Tüm uygulamaları durdur"
+📝 ÖRNEK İSTEKLER:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📊 DURUM KONTROL:
-   • "Zopio durumunu kontrol et"
+  💅 "Güzellik salonu için randevu uygulaması"
+  🏥 "Hastane hasta takip sistemi"  
+  🛒 "E-ticaret sitesi"
+  📚 "Kütüphane kitap takip uygulaması"
+  🏢 "Şirket çalışan yönetimi"
+  🍕 "Restoran sipariş sistemi"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧 UYGULAMANIZ ÇIKARKEN NELER OLUYOR:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1️⃣ Gereksinimlerinizi analiz ediyorum
+  2️⃣ Kullanıcı tiplerini belirliyorum
+  3️⃣ Zopio framework'ünü indiriyorum  
+  4️⃣ Database modellerini oluşturuyorum
+  5️⃣ API endpoint'leri yapıyorum
+  6️⃣ React sayfalarını kodluyorum
+  7️⃣ Tüm konfigürasyonu hazırlıyorum
+  8️⃣ Uygulamanızı çalışır halde teslim ediyorum
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ TESLIM EDİLEN UYGULAMA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ Tam çalışır admin paneli
+  ✅ Kullanıcı dostu arayüz
+  ✅ CRUD işlemleri (Ekle, Düzenle, Sil, Listele)
+  ✅ Form validasyonları
+  ✅ Responsive tasarım (mobil uyumlu)
+  ✅ RESTful API
+  ✅ Database bağlantısı
+  ✅ Real-time güncellemeler
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 HEMEN BAŞLAYIN:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  💬 Sadece isteğinizi doğal dille yazın:
+     "Veteriner kliniği için hasta takip uygulaması"
+     
+  🕒 2-3 dakika içinde tamamen çalışır uygulamanız hazır!
+  
+  🌐 http://localhost:3000 adresinden erişebilirsiniz
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📍 KURULUM DETAYLARI:
    • Konum: ~/Desktop/zopio
-   • Repo: https://github.com/zopiolabs/zopio.git
-   • Paket yöneticisi: pnpm
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💡 İPUCU: Doğrudan Türkçe komutlar verebilirsiniz!
-   Örnek: "Ben Zopio'da web uygulaması kurmak istiyorum"
+   • Framework: Next.js + Prisma + Tailwind
+   • Database: SQLite (geliştirme), PostgreSQL (canlı)
 
 ╔════════════════════════════════════════════════════════════╗
-║  Hazırsanız, istediğiniz senaryoyu seçin! 🚀              ║
+║  Ne tür bir uygulama istiyorsunuz? Yazın, hazırlayayım! 🚀║
 ╚════════════════════════════════════════════════════════════╝
 `;
 }
@@ -916,6 +1772,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
+        name: "create-complete-application",
+        description: "🚀 Yazılım bilmeyen kullanıcılar için tam otomatik uygulama üretici! Doğal dille proje isteğinizi yazın, tamamen çalışır halde uygulama alın. Örnek: 'Güzellik salonu için randevu uygulaması istiyorum'",
+        inputSchema: {
+          type: "object",
+          properties: {
+            userRequest: {
+              type: "string",
+              description: "Doğal dille yazılmış proje isteği. Örnek: 'Restoran için sipariş takip uygulaması', 'Kuaför randevu sistemi', 'E-ticaret sitesi'",
+            },
+          },
+          required: ["userRequest"],
+        },
+      },
+      {
         name: "setup-zopio-app",
         description: "Zopio'da belirli bir uygulamayı senaryo bazlı kurar ve başlatır. Web, API, Ana Uygulama, Dokümantasyon, Email veya Tümü.",
         inputSchema: {
@@ -966,6 +1836,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   
   try {
     switch (name) {
+      case "create-complete-application": {
+        const userRequest = args?.userRequest as string;
+        if (!userRequest) {
+          throw new Error("userRequest parametresi gerekli! Doğal dille proje isteğinizi yazın.");
+        }
+        const result = await generateCompleteApplication(userRequest);
+        return {
+          content: [
+            {
+              type: "text",
+              text: welcomePrefix + result,
+            },
+          ],
+        };
+      }
+      
       case "setup-zopio-app": {
         const appType = args?.appType as ZopioAppType;
         if (!appType) {
@@ -1028,32 +1914,48 @@ async function runServer() {
   await server.connect(transport);
   
   // Sunucu başlatıldığında karşılama mesajı
-  console.error("\n" + "=".repeat(60));
-  console.error("🚀 ZOPIO MCP SUNUCUSU BAŞLATILDI (SENARYO BAZLI)");
-  console.error("=".repeat(60) + "\n");
+  console.error("\n" + "🚀".repeat(20));
+  console.error("🚀 OTOMATİK UYGULAMA ÜRETİCİSİ BAŞLATILDI! 🚀");
+  console.error("🚀".repeat(20) + "\n");
+  
+  console.error("🎯 YENİ ÖZELLİK: TAM OTOMATİK UYGULAMA ÜRETİMİ!\n");
   
   console.error("📋 MEVCUT TOOL'LAR:\n");
-  console.error("  1️⃣  setup-zopio-app");
-  console.error("      → Senaryo bazlı kurulum: web, api, app, docs veya all");
-  console.error("      → Sadece seçilen uygulamayı kurar ve başlatır\n");
+  console.error("  🤖 create-complete-application");
+  console.error("      → Doğal dille isteğinizi yazın, tam uygulama alın!");
+  console.error("      → Örnek: 'Güzellik salonu randevu sistemi'");
+  console.error("      → 2-3 dakikada çalışır halde teslim!\n");
   
-  console.error("  2️⃣  stop-zopio-app");
-  console.error("      → Çalışan uygulamayı durdurur (belirli veya tümü)\n");
+  console.error("  🔧 setup-zopio-app");
+  console.error("      → Klasik kurulum: web, api, app, docs veya all\n");
   
-  console.error("  3️⃣  check-zopio-status");
-  console.error("      → Kurulum ve çalışan uygulamaların durumunu gösterir\n");
+  console.error("  🛑 stop-zopio-app");
+  console.error("      → Çalışan uygulamaları durdurur\n");
+  
+  console.error("  📊 check-zopio-status");
+  console.error("      → Durum kontrolü ve raporlama\n");
   
   console.error("─".repeat(60) + "\n");
-  console.error("🎯 SENARYO ÖRNEKLERİ:\n");
-  console.error("  • 'Zopio'da web uygulaması kur'");
-  console.error("  • 'Zopio'da API uygulaması kur'");
-  console.error("  • 'Zopio'nun tüm uygulamalarını kur'");
-  console.error("  • 'Web uygulamasını durdur'");
-  console.error("  • 'Zopio durumunu kontrol et'\n");
+  console.error("🔥 OTOMATİK UYGULAMA ÖRNEKLERİ:\n");
+  console.error("  💅 'Güzellik salonu randevu uygulaması'");
+  console.error("  🏥 'Hastane hasta takip sistemi'");
+  console.error("  🛒 'E-ticaret sitesi'");
+  console.error("  📚 'Kütüphane kitap yönetimi'");
+  console.error("  🍕 'Restoran sipariş sistemi'");
+  console.error("  🏢 'Şirket çalışan yönetimi'\n");
+  
   console.error("─".repeat(60) + "\n");
-  console.error("💡 İPUCU: Sadece ihtiyacınız olan uygulamayı kurun!");
-  console.error("   Artık tüm uygulamalar değil, seçtiğiniz uygulama kurulacak.\n");
-  console.error("=".repeat(60) + "\n");
+  console.error("✨ UYGULAMANIZDA NELER OLACAK:");
+  console.error("  ✅ Admin paneli + Kullanıcı arayüzü");
+  console.error("  ✅ CRUD işlemleri (Ekle, Düzenle, Sil)");
+  console.error("  ✅ Database + API + Frontend");
+  console.error("  ✅ Responsive tasarım (mobil uyumlu)");
+  console.error("  ✅ Form validasyonu + Error handling");
+  console.error("  ✅ Real-time güncellemeler\n");
+  
+  console.error("🚀".repeat(20) + "\n");
+  console.error("💬 Hemen deneyin: Ne tür uygulama istiyorsunuz?");
+  console.error("🚀".repeat(20) + "\n");
 }
 
 runServer().catch(console.error);

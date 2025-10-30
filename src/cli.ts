@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import readline from "readline";
-import { spawn } from "child_process";
+import * as readline from "readline";
+import { spawn, ChildProcess } from "child_process";
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -11,39 +11,41 @@ const rl = readline.createInterface({
 
 let client: Client | null = null;
 
+let serverProcess: ChildProcess | null = null;
+
 async function connectToServer() {
   console.log("🔌 MCP Sunucusuna bağlanılıyor...\n");
   
-  const serverProcess = spawn("npx", ["ts-node", "src/server.ts"], {
-    cwd: process.cwd(),
-    stdio: ["pipe", "pipe", "inherit"],
-  });
+  try {
+    const transport = new StdioClientTransport({
+      command: "npx",
+      args: ["ts-node", "src/server.ts"],
+    });
 
-  const transport = new StdioClientTransport({
-    command: "npx",
-    args: ["ts-node", "src/server.ts"],
-  });
+    client = new Client(
+      {
+        name: "zopio-cli",
+        version: "1.0.0",
+      },
+      {
+        capabilities: {},
+      }
+    );
 
-  client = new Client(
-    {
-      name: "zopio-cli",
-      version: "1.0.0",
-    },
-    {
-      capabilities: {},
-    }
-  );
-
-  await client.connect(transport);
-  console.log("✅ Sunucuya bağlandı!\n");
-  
-  // Mevcut tool'ları listele
-  const tools = await client.listTools();
-  console.log("📋 Mevcut Tool'lar:");
-  tools.tools.forEach((tool: any) => {
-    console.log(`  • ${tool.name}: ${tool.description}`);
-  });
-  console.log("");
+    await client.connect(transport);
+    console.log("✅ Sunucuya bağlandı!\n");
+    
+    // Mevcut tool'ları listele
+    const tools = await client.listTools();
+    console.log("📋 Mevcut Tool'lar:");
+    tools.tools.forEach((tool: any) => {
+      console.log(`  • ${tool.name}: ${tool.description}`);
+    });
+    console.log("");
+  } catch (error: any) {
+    console.log(`❌ Bağlantı hatası: ${error.message}`);
+    throw error;
+  }
 }
 
 async function callTool(toolName: string, args: any = {}) {
@@ -130,6 +132,9 @@ async function handleCommand(input: string) {
 
     case "exit":
       console.log("\n👋 Görüşmek üzere!\n");
+      if (client) {
+        await client.close();
+      }
       rl.close();
       process.exit(0);
       break;
@@ -149,7 +154,7 @@ async function startCLI() {
     showHelp();
 
     const prompt = () => {
-      rl.question("zopio> ", async (input) => {
+      rl.question("zopio> ", async (input: string) => {
         await handleCommand(input);
         prompt();
       });
