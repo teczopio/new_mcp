@@ -12,6 +12,7 @@ import * as os from "os";
 import * as path from "path";
 import * as fs from "fs";
 
+// ✅ ZOPIO FRAMEWORK - DOĞRU REPOSITORY
 const REPO_URL = "https://github.com/zopiolabs/zopio.git";
 let runningProcesses: Map<string, ChildProcess> = new Map();
 let hasShownWelcome = false;
@@ -23,13 +24,18 @@ const FORBIDDEN_FRAMEWORKS = [
   'vue.js', 'vue', 'vue-cli', 'nuxt',
   'angular', 'ng', '@angular/cli',
   'svelte', 'sveltekit', 'create-svelte',
-  'gatsby', 'remix', 'astro'
+  'gatsby', 'remix', 'astro',
+  '.js', 'javascript' // ❌ JavaScript dosyaları yasak
 ];
 
 const FORBIDDEN_COMMANDS = [
   'npx create-next-app', 'npm create react-app', 'vue create',
   'ng new', 'npx create-svelte', 'npm init', 'yarn create', 'pnpm create'
 ];
+
+// ✅ ZORUNLU DOSYA YAPISI
+const REQUIRED_FILE_EXTENSION = '.ts'; // Sadece TypeScript
+const FORBIDDEN_FILE_EXTENSIONS = ['.js', '.jsx']; // JavaScript yasak
 
 /**
  * Framework yasağı kontrolü - KULLANICI SINIRI
@@ -58,6 +64,32 @@ function checkFrameworkProhibition(input: string): { isViolation: boolean; messa
   }
   
   return { isViolation: false, message: "" };
+}
+
+/**
+ * Dosya uzantısı kontrolü - TypeScript zorunluluğu
+ */
+function validateFileExtension(filename: string): { isValid: boolean; message: string } {
+  const ext = path.extname(filename).toLowerCase();
+  
+  // JavaScript dosyaları yasak
+  if (FORBIDDEN_FILE_EXTENSIONS.includes(ext)) {
+    return {
+      isValid: false,
+      message: `🚨 DOSYA UZANTISI İHLALİ: "${ext}" uzantısı YASAK!\n❌ JAVASCRIPT (.js, .jsx) DOSYALARI YASAK!\n✅ SADECE TYPESCRIPT (.ts, .tsx) KULLANILACAK!\n🔧 Dosya adını "${filename.replace(ext, '.ts')}" olarak değiştirin.`
+    };
+  }
+  
+  // TypeScript kontrolü (sadece .ts, .tsx, .prisma, .json, .md, .css izinli)
+  const allowedExtensions = ['.ts', '.tsx', '.prisma', '.json', '.md', '.css', '.env'];
+  if (!allowedExtensions.includes(ext) && ext !== '') {
+    return {
+      isValid: false,
+      message: `⚠️ UYARI: "${ext}" uzantısı önerilmiyor. TypeScript (.ts/.tsx) kullanın.`
+    };
+  }
+  
+  return { isValid: true, message: "" };
 }
 
 // Zopio uygulama türleri
@@ -1179,15 +1211,20 @@ function getWelcomeMessage(): string {
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
 
-👋 Merhaba! SADECE ZOPIO FRAMEWORK ile tam özellikli uygulamalar üretiyorum!
+👋 Merhaba! SADECE ZOPIO FRAMEWORK ile TypeScript tabanlı uygulamalar üretiyorum!
 
-⚠️ ÖNEMLI UYARI: MANUEL NEXT.JS/REACT KURULUMU YASAK!
+🚨 KRİTİK SINIR KURALLARI:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ MANUEL NEXT.JS/REACT KURULUMU YASAK!
+❌ JAVASCRIPT (.js/.jsx) DOSYALARI YASAK!
+✅ SADECE ZOPIO FRAMEWORK!
+✅ SADECE TYPESCRIPT (.ts/.tsx)!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   🤖 ZOPIO İLE TAM OTOMATİK UYGULAMA
       ├─ Doğal dille isteğinizi yazın → create-complete-application
-      ├─ Zopio framework otomatik kurulur  
-      ├─ Tüm dosyaları otomatik oluşturur
+      ├─ Zopio framework otomatik kurulur (https://github.com/zopiolabs/zopio.git)
+      ├─ TypeScript (.ts) dosyaları otomatik oluşturur
       ├─ Çalışır halde uygulama teslim eder
       └─ Örnek: "Kuaför randevu sistemi lazım"
 
@@ -1819,13 +1856,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "create-complete-application",
-        description: "🚀 ZOPIO FRAMEWORK İLE TAM OTOMATİK UYGULAMA ÜRETİCİSİ! Her türlü uygulama talebi için SADECE bu tool'u kullan. Manuel Next.js, React veya başka framework kurulumu yapmak YASAK! Doğal dille proje isteğinizi yazın, Zopio ile tamamen çalışır halde uygulama alın. Örnek: 'Kuaför randevu uygulaması lazım', 'Restoran sistemi istiyorum'",
+        description: "⭐ ZOPIO FRAMEWORK İLE TAM OTOMATİK UYGULAMA ÜRETİCİSİ! ⭐\n\n🚨 ZORUNLU KURALLAR:\n✅ SADECE Zopio Framework kullanılacak\n✅ SADECE TypeScript (.ts/.tsx) dosyaları oluşturulacak\n❌ Manuel Next.js/React kurulumu YASAK\n❌ JavaScript (.js/.jsx) dosyaları YASAK\n\n📝 KULLANIM: Doğal dille proje isteğinizi yazın, Zopio ile TypeScript tabanlı tamamen çalışır uygulama alın.\n\n💡 ÖRNEKLER:\n• 'Kuaför randevu uygulaması lazım'\n• 'Restoran sipariş sistemi istiyorum'\n• 'E-ticaret sitesi'\n• 'Blog uygulaması'",
         inputSchema: {
           type: "object",
           properties: {
             userRequest: {
               type: "string",
-              description: "Doğal dille yazılmış proje isteği. HER TÜRLÜ UYGULAMA TALEBİ için bu tool'u kullan! Örnek: 'Kuaför randevu sistemi', 'E-ticaret sitesi', 'Blog uygulaması', 'Restoran menü sistemi', 'Hastane randevu sistemi'",
+              description: "Doğal dille yazılmış proje isteği. HER TÜRLÜ UYGULAMA TALEBİ için bu tool'u kullan! Zopio framework ile TypeScript (.ts) dosyaları oluşturulacak. Örnek: 'Kuaför randevu sistemi', 'E-ticaret sitesi', 'Blog uygulaması', 'Restoran menü sistemi', 'Hastane randevu sistemi'",
             },
           },
           required: ["userRequest"],
@@ -1982,12 +2019,17 @@ async function runServer() {
   console.error("🚀".repeat(20) + "\n");
   
   console.error("🎯 ZOPIO FRAMEWORK İLE TAM OTOMATİK UYGULAMA ÜRETİMİ!\n");
-  console.error("⚠️  UYARI: SADECE ZOPIO FRAMEWORK KULLAN - MANUEL KURULUM YASAK!\n");
+  console.error("🚨 KRİTİK SINIRLAR:");
+  console.error("   ❌ MANUEL NEXT.JS/REACT KURULUMU YASAK!");
+  console.error("   ❌ JAVASCRIPT (.js/.jsx) DOSYALARI YASAK!");
+  console.error("   ✅ SADECE ZOPIO FRAMEWORK!");
+  console.error("   ✅ SADECE TYPESCRIPT (.ts/.tsx)!\n");
   
   console.error("📋 MEVCUT TOOL'LAR:\n");
   console.error("  🤖 create-complete-application ⭐ ANA TOOL ⭐");
   console.error("      → HER TÜRLÜ UYGULAMA TALEBİ için bu tool'u kullan!");
-  console.error("      → Zopio framework ile otomatik üretim!");
+  console.error("      → Zopio framework (https://github.com/zopiolabs/zopio.git)");
+  console.error("      → TypeScript (.ts) dosyaları ile otomatik üretim!");
   console.error("      → Örnek: 'Kuaför randevu sistemi', 'Restoran uygulaması'");
   console.error("      → 2-3 dakikada çalışır halde teslim!\n");
   
